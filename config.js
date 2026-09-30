@@ -6,17 +6,17 @@ const CONFIG = {
   // 비워 두면 "테스트 모드": 데이터가 서버로 가지 않고 내 컴퓨터로 CSV 파일이 다운로드됩니다.
   DATAPIPE_ID: "m3DWHYvdkTa4",
 
-  EXPERIMENT_VERSION: "1.0",
+  EXPERIMENT_VERSION: "2.0",
 
   // 클립 설정
   CLIP_SECONDS: 30,             // 클립 길이(초)
-  ITEM_COUNTS: [6, 12],         // 항목 수 조건 → 항목당 5초 / 2.5초
+  ITEM_COUNTS: [4, 8],          // 항목 수 조건 → 항목당 7.5초 / 3.75초
   CLIPS_PER_CONDITION: 2,
 
   // 문제 설정
   QUESTION_TIME_LIMIT_MS: 10000,   // 문제당 제한 시간(ms). 10000 = 10초
   GAP_BETWEEN_QUESTIONS_MS: 400,   // 문제 사이 빈 화면(ms)
-  PROCESSES: ["가공정", "나공정", "다공정", "라공정"],  // 보기 순서(항상 이 순서)
+  PROCESSES: ["해공정", "달공정", "별공정", "숲공정"],  // 보기 순서(항상 이 순서)
 
   // 자기보고 문항
   RATING_QUESTION: "제시된 정보를 끝까지 따라갈 수 있었다.",
