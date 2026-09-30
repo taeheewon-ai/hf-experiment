@@ -8,21 +8,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=block" rel="stylesheet">
   <link rel="stylesheet" href="lib/jspsych.css">
-  <link rel="stylesheet" href="css/style.css">
   <script src="lib/jspsych.js"></script>
   <script src="lib/plugin-html-button-response.js"></script>
   <script src="lib/plugin-html-keyboard-response.js"></script>
   <script src="lib/plugin-survey-html-form.js"></script>
   <script src="lib/plugin-fullscreen.js"></script>
   <script src="lib/plugin-call-function.js"></script>
-  <script src="config.js"></script>
-  <script src="js/plugins.js"></script>
-  <script src="js/experiment.js" defer></script>
+  <script>
+    // 설정·코드 파일은 매번 최신본을 받도록(업데이트 직후 옛 파일이 섞이지 않게)
+    const V = Date.now();
+    document.write(`<link rel="stylesheet" href="css/style.css?v=${V}">`);
+  </script>
 </head>
 <body>
   <div id="loading" class="loading">
     <p id="loading-text">실험을 준비하고 있어요…</p>
     <div class="bar"><div id="loading-bar"></div></div>
   </div>
+  <script>
+    ["config.js", "js/plugins.js", "js/experiment.js"].forEach((f) =>
+      document.write(`<script src="${f}?v=${V}"><\/script>`));
+  </script>
 </body>
 </html>

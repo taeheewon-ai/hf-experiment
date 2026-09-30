@@ -8,7 +8,7 @@ const AUDIO = {
   ctx: new (window.AudioContext || window.webkitAudioContext)(),
   buffers: {},   // 파일 경로 → 디코딩된 소리
   async load(path) {
-    const res = await fetch(path);
+    const res = await fetch(path, { cache: "no-cache" });   // 바뀐 음성 파일이 있으면 새로 받음
     if (!res.ok) throw new Error(`음성 파일을 찾을 수 없습니다: ${path}`);
     this.buffers[path] = await this.ctx.decodeAudioData(await res.arrayBuffer());
   },
