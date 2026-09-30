@@ -41,7 +41,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) WATCH
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) WATCH.fsExits++; });
 
 // =====================================================================
-//  클립 재생: 30초 동안 항목을 차례로 제시. 멈춤/되감기 불가.
+//  클립 재생: 정해진 시간(기본 20초) 동안 항목을 차례로 제시. 멈춤/되감기 불가.
 //  자막과 음성은 같은 오디오 시계로 맞춰서 동시에 나옵니다.
 // =====================================================================
 class ClipPlugin {

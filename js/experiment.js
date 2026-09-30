@@ -138,7 +138,7 @@ function clipUnit(getClip, total) {
       const title = practice() ? "연습 클립" : `클립 ${c.clipNo} / ${total}`;
       return page(`<h2>${title}</h2>
         <p style="text-align:center">준비되면 <b>[시작]</b>을 눌러 주세요.<br>
-        화면 가운데 <b>+</b> 가 나오고 1초 뒤 30초 동안 항목이 제시됩니다.<br>
+        화면 가운데 <b>+</b> 가 나오고 1초 뒤 ${C.CLIP_SECONDS}초 동안 항목이 제시됩니다.<br>
         <span class="note">클립은 멈추거나 다시 볼 수 없어요.</span></p>`);
     },
     choices: ["시작"],
@@ -154,7 +154,7 @@ function clipUnit(getClip, total) {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: page(`<p style="text-align:center;font-size:22px">이제 방금 나온 항목에 대한 문제가 나옵니다.</p>`),
     choices: "NO_KEYS",
-    trial_duration: 1500,
+    trial_duration: C.TRANSITION_MS,
   };
 
   let q = 0;
@@ -227,9 +227,9 @@ function buildTimeline() {
   tl.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: page(`<h2>학습 콘텐츠 인식 실험</h2>
-      <p>참여해 주셔서 감사합니다. 실험은 약 <b>15~20분</b> 걸립니다.</p>
+      <p>참여해 주셔서 감사합니다. 실험은 약 <b>10~15분</b> 걸립니다.</p>
       <ul>
-        <li>짧은 클립(30초)을 보거나 듣고, 방금 나온 내용을 얼마나 정확히 알아보는지 답하는 실험이에요.</li>
+        <li>짧은 클립(${C.CLIP_SECONDS}초)을 보거나 듣고, 방금 나온 내용을 얼마나 정확히 알아보는지 답하는 실험이에요.</li>
         <li><b>조용한 곳</b>에서, <b>이어폰이나 스피커로 소리를 들을 수 있는 컴퓨터</b>로 참여해 주세요.</li>
         <li>실험 중에는 다른 창이나 탭으로 이동하지 말아 주세요.</li>
         <li>중간에 창을 닫으면 처음부터 다시 해야 해요.</li>
@@ -306,7 +306,7 @@ function buildTimeline() {
   tl.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: page(`<h2>과제 안내</h2>
-      <p>화면에 <b>'가상의 가공법 이름 – 공정 분류'</b> 쌍이 30초 동안 차례로 제시됩니다. 예: <b>펄디법 – ${C.PROCESSES[0]}</b></p>
+      <p>화면에 <b>'가상의 가공법 이름 – 공정 분류'</b> 쌍이 ${C.CLIP_SECONDS}초 동안 차례로 제시됩니다. 예: <b>펄디법 – ${C.PROCESSES[0]}</b></p>
       <ul>
         <li>공정 분류는 <b>${C.PROCESSES.join(", ")}</b> 네 가지뿐이에요.</li>
         <li>클립에 따라 <b>자막만</b>, <b>음성만</b>, 또는 <b>자막과 음성이 함께</b> 나옵니다.</li>
