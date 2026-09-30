@@ -1,0 +1,55 @@
+html, body {
+  font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+  background: #f4f4f2;
+  color: #1c1c1c;
+}
+.jspsych-display-element { font-family: inherit; font-size: 18px; }
+.jspsych-content { max-width: 960px; }
+
+/* 안내 화면 */
+.box { text-align: left; line-height: 1.75; max-width: 720px; margin: 0 auto; }
+.box h2 { text-align: center; margin-bottom: 1.2em; }
+.box ul { padding-left: 1.3em; }
+.box .note { color: #555; font-size: 15px; }
+.warn { color: #b3261e; font-weight: 700; }
+
+.jspsych-btn {
+  font-family: inherit; font-size: 17px; padding: 10px 22px; border-radius: 8px;
+}
+
+/* 입력 양식 */
+.form { text-align: left; max-width: 480px; margin: 0 auto; line-height: 2.2; }
+.form input[type=number] { width: 110px; font-size: 17px; padding: 4px 6px; }
+.form .row { margin-bottom: 10px; }
+.form .check { display: flex; gap: 8px; align-items: flex-start; line-height: 1.6; margin-top: 12px; }
+
+/* 클립 화면: 모든 참가자에게 같은 크기(900x506px), 같은 글꼴, 같은 위치 */
+.stage {
+  position: relative; width: 900px; height: 506px; margin: 0 auto;
+  background: #111; border-radius: 4px; cursor: none; user-select: none;
+}
+.stage .fix {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  color: #bbb; font-size: 44px; font-weight: 400; text-align: center;
+}
+.stage .sub {
+  position: absolute; left: 0; right: 0; bottom: 60px; text-align: center;
+  font-family: "Noto Sans KR", sans-serif; font-size: 40px; font-weight: 500;
+  color: #fff; letter-spacing: 0.02em;
+}
+
+/* 문제 화면 */
+.question { font-size: 30px; font-weight: 700; margin-bottom: 40px; }
+.choice-btn { font-size: 22px; min-width: 150px; padding: 16px 20px; margin: 0 8px; }
+.rating-btn { font-size: 17px; min-width: 120px; padding: 12px 10px; margin: 0 5px; line-height: 1.4; }
+.feedback { font-size: 26px; font-weight: 700; }
+.feedback.ok { color: #1b7f3b; }
+.feedback.no { color: #b3261e; }
+
+/* 소리 테스트 */
+.play-btn { font-size: 20px; padding: 14px 28px; margin-bottom: 30px; }
+
+/* 준비 중 화면 */
+.loading { max-width: 420px; margin: 30vh auto 0; text-align: center; }
+.loading .bar { height: 10px; background: #ddd; border-radius: 5px; overflow: hidden; }
+.loading .bar div { height: 100%; width: 0; background: #3a6ea5; transition: width .2s; }
