@@ -6,7 +6,7 @@ const CONFIG = {
   // 비워 두면 "테스트 모드": 데이터가 서버로 가지 않고 내 컴퓨터로 CSV 파일이 다운로드됩니다.
   DATAPIPE_ID: "m3DWHYvdkTa4",
 
-  EXPERIMENT_VERSION: "3.0",
+  EXPERIMENT_VERSION: "4.0",
 
   // 클립 설정
   CLIP_SECONDS: 20,             // 클립 길이(초)

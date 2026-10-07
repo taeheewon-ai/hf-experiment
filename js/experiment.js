@@ -5,8 +5,15 @@ const C = CONFIG;
 const MODALITIES = ["subtitle", "audio", "both"];
 
 // 참가자 한 명의 모든 정보가 여기에 모입니다.
+const URLP = new URLSearchParams(location.search);
+// 무작위 참가자 코드(신원과 연결되지 않음). 파일럿/테스트는 PILOT- 로 시작
+const randomCode = () => {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => abc[b % abc.length]).join("");
+};
 const S = {
-  pid: null, age: "", gender: "", orderId: null, order: null,
+  pilot: URLP.get("pilot") === "1",
+  code: null, assignment: "", age: "", gender: "", orderId: null, order: null,
   mainItems: [], practiceItems: [],
   sequence: [],        // 본실험 클립 12개(보는 순서대로)
   practiceClip: null,
@@ -29,10 +36,6 @@ const withIGa = (w) => {
   const c = w.charCodeAt(w.length - 1);
   const hasBatchim = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
   return w + (hasBatchim ? "이" : "가");
-};
-const stamp = (d) => {
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 };
 const page = (html) => `<div class="box">${html}</div>`;
 
@@ -92,6 +95,34 @@ function checkItems(items) {
   if (dup.length) errs.push(`이름이 겹치는 항목: ${[...new Set(dup)].join(", ")}`);
   if (!prac.length) errs.push("연습(practice) 항목이 없습니다.");
   return errs;
+}
+
+// ---------- 블록 순서 배정 ----------
+//  · 보통: DataPipe가 들어온 순서대로 1→2→…→6→1… 을 돌아가며 배정 (30명이면 각 5명)
+//  · 링크 끝에 ?order=3 처럼 붙이면 그 순서로 지정 (중도 포기로 모자란 순서를 채울 때)
+//  · 링크 끝에 ?pilot=1 을 붙이면 파일럿/테스트: 배정 순번을 쓰지 않고 무작위, 코드가 PILOT- 로 시작
+async function assignOrder() {
+  const n = C.BLOCK_ORDERS.length;
+  const manual = parseInt(URLP.get("order"), 10);
+  S.code = (S.pilot ? "PILOT-" : "") + randomCode();
+  if (manual >= 1 && manual <= n) {
+    S.orderId = manual; S.assignment = "manual";
+  } else if (S.pilot || !C.DATAPIPE_ID) {
+    S.orderId = Math.floor(Math.random() * n) + 1; S.assignment = "random_pilot";
+  } else {
+    const res = await fetch("https://pipe.jspsych.org/api/condition/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "*/*" },
+      body: JSON.stringify({ experimentID: C.DATAPIPE_ID }),
+    });
+    let body = null;
+    try { body = await res.json(); } catch { body = null; }
+    if (!body || body.error || typeof body.condition !== "number") {
+      throw new Error(`순서 배정 실패 (HTTP ${res.status}${body && body.error ? ", " + body.error : ""})`);
+    }
+    S.orderId = (body.condition % n) + 1; S.assignment = "datapipe";
+  }
+  S.order = C.BLOCK_ORDERS[S.orderId - 1];
 }
 
 // ---------- 참가자별 클립 구성 ----------
@@ -173,7 +204,7 @@ function clipUnit(getClip, total) {
       d.correct = correct; d.timeout = timeout; d.answer = it.process;
       if (c.phase === "practice") { S.practiceTotal++; S.practiceCorrect += correct; }
       S.trialRows.push({
-        participant: S.pid, phase: c.phase, block_order_id: S.orderId, block_no: c.block,
+        participant: S.code, phase: c.phase, block_order_id: S.orderId, block_no: c.block,
         modality: c.modality, n_items: c.n, clip_no: c.clipNo, question_no: q + 1,
         item_id: it.id, item: it.name, correct_answer: it.process, response: resp,
         correct, rt_ms: timeout ? "" : Math.round(d.rt), timeout: timeout ? 1 : 0,
@@ -209,7 +240,7 @@ function clipUnit(getClip, total) {
     on_finish: (d) => {
       const c = getClip(), cd = c.clipData || {};
       S.clipRows.push({
-        participant: S.pid, phase: c.phase, block_order_id: S.orderId, block_no: c.block,
+        participant: S.code, phase: c.phase, block_order_id: S.orderId, block_no: c.block,
         modality: c.modality, n_items: c.n, clip_no: c.clipNo,
         rating: d.response + 1, rating_rt_ms: Math.round(d.rt),
         away_during_clip: cd.clip_away, fullscreen_exit_during_clip: cd.clip_fs_exit,
@@ -237,12 +268,11 @@ function buildTimeline() {
     choices: ["다음"],
   });
 
-  // 참가자 정보 (번호 확인 화면을 거쳐, 잘못 입력했으면 다시 입력)
-  const info = {
+  // 참가자 정보 (이름·번호 등 신원 정보는 받지 않음)
+  tl.push({
     type: jsPsychSurveyHtmlForm,
     preamble: `<h2>참가자 정보</h2>`,
     html: `<div class="form">
-      <div class="row">참가자 번호 <input name="pid" type="number" min="1" max="9999" step="1" required> <span class="note">(안내받은 번호)</span></div>
       <div class="row">나이 <input name="age" type="number" min="10" max="99" step="1" required> 세</div>
       <div class="row">성별
         <label><input type="radio" name="gender" value="남" required> 남</label>
@@ -253,26 +283,22 @@ function buildTimeline() {
     </div>`,
     button_label: "다음",
     on_finish: (d) => {
-      S.pid = parseInt(d.response.pid, 10);
       S.age = d.response.age;
       S.gender = d.response.gender;
     },
-  };
-  const confirmPid = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: () => page(`<p style="text-align:center;font-size:22px">참가자 번호가 <b>${S.pid}번</b> 맞나요?</p>`),
-    choices: ["맞아요", "다시 입력할게요"],
-  };
-  tl.push({
-    timeline: [info, confirmPid],
-    loop_function: (data) => data.values()[1].response === 1,
   });
+  // 블록 순서 배정 (정보 입력을 마친 사람에게만 배정해서, 첫 화면에서 나간 사람은 순서를 차지하지 않음)
   tl.push({
     type: jsPsychCallFunction,
-    func: () => {
-      S.orderId = ((S.pid - 1) % C.BLOCK_ORDERS.length) + 1;
-      S.order = C.BLOCK_ORDERS[S.orderId - 1];
-      buildSequence();
+    async: true,
+    func: (done) => {
+      assignOrder().then(() => { buildSequence(); done(); })
+        .catch((e) => {
+          window.removeEventListener("beforeunload", warnLeave);
+          stopWith(`<h2>잠시 후 다시 시도해 주세요</h2>
+            <p>실험 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 <b>새로고침(F5)</b>해서 다시 시작해 주세요.</p>
+            <p class="note">${e.message}</p>`);
+        });
     },
   });
 
@@ -376,19 +402,18 @@ function buildTimeline() {
 function buildFiles() {
   const end = new Date();
   const participant = [{
-    participant: S.pid, age: S.age, gender: S.gender,
-    block_order_id: S.orderId, block_order: S.order.join(">"),
-    start_time: stamp(S.startTime), end_time: stamp(end),
+    // 익명성을 위해 시작·종료 시각과 브라우저 정보는 저장하지 않고 소요 시간만 남김
+    participant: S.code, pilot: S.pilot ? 1 : 0, age: S.age, gender: S.gender,
+    block_order_id: S.orderId, block_order: S.order.join(">"), assignment: S.assignment,
     duration_min: ((end - S.startTime) / 60000).toFixed(1),
     practice_correct: S.practiceCorrect, practice_total: S.practiceTotal,
     soundcheck_attempts: S.soundcheckAttempts,
     tab_away_total: WATCH.away, fullscreen_exits: WATCH.fsExits,
     font_loaded: S.fontOk ? 1 : 0,
     audio_output_latency_ms: Math.round(((AUDIO.ctx.outputLatency || 0) + (AUDIO.ctx.baseLatency || 0)) * 1000),
-    screen: `${screen.width}x${screen.height}`, window: `${innerWidth}x${innerHeight}`,
-    browser: navigator.userAgent, version: C.EXPERIMENT_VERSION,
+    screen: `${screen.width}x${screen.height}`, version: C.EXPERIMENT_VERSION,
   }];
-  const tag = `P${String(S.pid).padStart(3, "0")}_${stamp(S.startTime).replace(/[-: ]/g, "")}_${Math.random().toString(36).slice(2, 6)}`;
+  const tag = S.code;   // 파일 이름에도 시각을 넣지 않음
   return [
     { name: `${tag}_trials.csv`, data: toCSV(S.trialRows, ["participant", "phase", "block_order_id", "block_no", "modality", "n_items", "clip_no", "question_no", "item_id", "item", "correct_answer", "response", "correct", "rt_ms", "timeout"]) },
     { name: `${tag}_clips.csv`, data: toCSV(S.clipRows, ["participant", "phase", "block_order_id", "block_no", "modality", "n_items", "clip_no", "rating", "rating_rt_ms", "away_during_clip", "fullscreen_exit_during_clip", "sub_lag_mean_ms", "sub_lag_max_ms", "items_in_order"]) },
