@@ -13,7 +13,7 @@ const randomCode = () => {
 };
 const S = {
   pilot: URLP.get("pilot") === "1",
-  code: null, assignment: "", age: "", gender: "", orderId: null, order: null,
+  code: null, assignment: "", ageGroup: "", gender: "", orderId: null, order: null,
   mainItems: [], practiceItems: [],
   sequence: [],        // 본실험 클립 12개(보는 순서대로)
   practiceClip: null,
@@ -37,7 +37,13 @@ const withIGa = (w) => {
   const hasBatchim = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
   return w + (hasBatchim ? "이" : "가");
 };
-const page = (html) => `<div class="box">${html}</div>`;
+const EYEBROW = `<div class="eyebrow">${C.COURSE_LABEL}</div>`;
+// 안내 화면 틀. head=true 이면 맨 위에 과목·조 표시
+const page = (html, head = false) => `<div class="box">${head ? EYEBROW : ""}${html}</div>`;
+// 진행 막대 (본실험 클립 몇 개째인지)
+const progressBar = (done, total, label) => `<div class="progress">
+  <div class="label"><span>${label}</span><span>${Math.round((done / total) * 100)}%</span></div>
+  <div class="track"><div class="fill" style="width:${(done / total) * 100}%"></div></div></div>`;
 
 // ---------- CSV 읽기/쓰기 ----------
 function parseCSV(text) {
@@ -166,11 +172,12 @@ function clipUnit(getClip, total) {
     type: jsPsychHtmlButtonResponse,
     stimulus: () => {
       const c = getClip();
-      const title = practice() ? "연습 클립" : `클립 ${c.clipNo} / ${total}`;
-      return page(`<h2>${title}</h2>
-        <p style="text-align:center">준비되면 <b>[시작]</b>을 눌러 주세요.<br>
-        화면 가운데 <b>+</b> 가 나오고 1초 뒤 ${C.CLIP_SECONDS}초 동안 항목이 제시됩니다.<br>
-        <span class="note">클립은 멈추거나 다시 볼 수 없어요.</span></p>`);
+      const bar = practice() ? "" : progressBar(c.clipNo - 1, total, `본실험 · 클립 ${c.clipNo} / ${total}`);
+      const title = practice() ? "연습 클립" : `클립 ${c.clipNo}`;
+      return page(`${bar}<h2 class="center">${title}</h2>
+        <p class="center">준비되면 <b>[시작]</b>을 눌러 주세요.<br>
+        화면 가운데 <b>+</b>가 나오고, 1초 뒤 ${C.CLIP_SECONDS}초 동안 항목이 제시됩니다.</p>
+        <p class="center note">클립은 멈추거나 다시 볼 수 없습니다.</p>`);
     },
     choices: ["시작"],
     on_finish: () => AUDIO.resume(),
@@ -183,7 +190,7 @@ function clipUnit(getClip, total) {
   };
   const toQuestions = {
     type: jsPsychHtmlKeyboardResponse,
-    stimulus: page(`<p style="text-align:center;font-size:22px">이제 방금 나온 항목에 대한 문제가 나옵니다.</p>`),
+    stimulus: page(`<p class="center" style="font-size:21px;margin:18px 0">이제 방금 나온 항목에 대한 문제가 나옵니다.</p>`),
     choices: "NO_KEYS",
     trial_duration: C.TRANSITION_MS,
   };
@@ -191,7 +198,12 @@ function clipUnit(getClip, total) {
   let q = 0;
   const question = {
     type: jsPsychHtmlButtonResponse,
-    stimulus: () => `<div class="question">${withIGa(getClip().qOrder[q].name)} 속하는 공정은?</div>`,
+    stimulus: () => {
+      const c = getClip(), name = c.qOrder[q].name, josa = withIGa(name).slice(name.length);
+      const where = c.phase === "practice" ? "연습" : `클립 ${c.clipNo}`;
+      return `<div class="qmeta">${where} · 문항 ${q + 1} / ${c.qOrder.length}</div>
+        <div class="question"><span class="name">${name}</span>${josa} 속하는 공정은?</div>`;
+    },
     choices: C.PROCESSES,
     button_html: (choice) => `<button class="jspsych-btn choice-btn">${choice}</button>`,
     trial_duration: C.QUESTION_TIME_LIMIT_MS,
@@ -215,8 +227,8 @@ function clipUnit(getClip, total) {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: () => {
       const d = jsPsych.data.getLastTrialData().values()[0];
-      if (d.timeout) return `<p class="feedback no">시간 초과! (정답: ${d.answer})</p><p class="note">문제마다 ${C.QUESTION_TIME_LIMIT_MS / 1000}초 안에 답해 주세요.</p>`;
-      return d.correct ? `<p class="feedback ok">정답입니다!</p>` : `<p class="feedback no">틀렸어요. 정답은 ${d.answer}입니다.</p>`;
+      if (d.timeout) return `<p class="feedback no">시간 초과</p><p>정답은 <b>${d.answer}</b>입니다.</p><p class="note">문제마다 ${C.QUESTION_TIME_LIMIT_MS / 1000}초 안에 답해 주세요.</p>`;
+      return d.correct ? `<p class="feedback ok">정답입니다</p>` : `<p class="feedback no">오답입니다</p><p>정답은 <b>${d.answer}</b>입니다.</p>`;
     },
     choices: "NO_KEYS",
     trial_duration: 1300,
@@ -233,10 +245,11 @@ function clipUnit(getClip, total) {
   };
   const rating = {
     type: jsPsychHtmlButtonResponse,
-    stimulus: page(`<p style="text-align:center">방금 본 클립에 대해 답해 주세요.</p>
-      <div class="question" style="text-align:center">${C.RATING_QUESTION}</div>`),
+    stimulus: page(`<p class="center note" style="margin:0">방금 본 클립에 대해 답해 주세요.</p>
+      <div class="scale-q center">${C.RATING_QUESTION}</div>`),
     choices: C.RATING_LABELS,
     button_html: (choice) => `<button class="jspsych-btn rating-btn">${choice}</button>`,
+    prompt: `<div class="scale-ends"><span>1 = ${C.RATING_ENDS[0]}</span><span>5 = ${C.RATING_ENDS[1]}</span></div>`,
     on_finish: (d) => {
       const c = getClip(), cd = c.clipData || {};
       S.clipRows.push({
@@ -255,39 +268,68 @@ function clipUnit(getClip, total) {
 function buildTimeline() {
   const tl = [];
 
+  const chips = (name, values) => `<div class="chips">${values.map((v, i) =>
+    `<label class="chip"><input type="radio" name="${name}" value="${v}" ${i === 0 ? "required" : ""}><span>${v}</span></label>`).join("")}</div>`;
+
+  // 1) 시작 화면 → 전체 화면 전환
   tl.push({
-    type: jsPsychHtmlButtonResponse,
-    stimulus: page(`<h2>학습 콘텐츠 인식 실험</h2>
-      <p>참여해 주셔서 감사합니다. 실험은 약 <b>10~15분</b> 걸립니다.</p>
-      <ul>
-        <li>짧은 클립(${C.CLIP_SECONDS}초)을 보거나 듣고, 방금 나온 내용을 얼마나 정확히 알아보는지 답하는 실험이에요.</li>
-        <li><b>조용한 곳</b>에서, <b>이어폰이나 스피커로 소리를 들을 수 있는 컴퓨터</b>로 참여해 주세요.</li>
-        <li>실험 중에는 다른 창이나 탭으로 이동하지 말아 주세요.</li>
-        <li>중간에 창을 닫으면 처음부터 다시 해야 해요.</li>
-      </ul>`),
-    choices: ["다음"],
+    type: jsPsychFullscreen,
+    fullscreen_mode: true,
+    message: page(`<h1>${C.EXPERIMENT_TITLE}</h1>
+      <p class="lead">짧은 학습 클립을 보거나 듣고, 방금 나온 내용을 얼마나 정확히 알아보는지 측정합니다.</p>
+      <div class="facts">
+        <div class="fact">소요 시간<b>약 10~15분</b></div>
+        <div class="fact">준비물<b>PC + 스피커/이어폰</b></div>
+        <div class="fact">환경<b>조용한 곳</b></div>
+      </div>
+      <p class="note">실험은 전체 화면에서 진행됩니다. 진행 중에는 다른 창이나 탭으로 이동하지 말아 주세요.</p>`, true),
+    button_label: "전체 화면으로 시작",
+    on_finish: () => AUDIO.resume(),
   });
 
-  // 참가자 정보 (이름·번호 등 신원 정보는 받지 않음)
+  // 2) 안내 및 동의
   tl.push({
     type: jsPsychSurveyHtmlForm,
-    preamble: `<h2>참가자 정보</h2>`,
-    html: `<div class="form">
-      <div class="row">나이 <input name="age" type="number" min="10" max="99" step="1" required> 세</div>
-      <div class="row">성별
-        <label><input type="radio" name="gender" value="남" required> 남</label>
-        <label><input type="radio" name="gender" value="여"> 여</label>
-        <label><input type="radio" name="gender" value="응답하지 않음"> 응답하지 않음</label></div>
-      <label class="check"><input type="checkbox" name="normal" required>
-        <span>시력(안경·렌즈 교정 포함)과 청력이 정상입니다.</span></label>
-    </div>`,
+    html: page(`<h2>실험 안내 및 참여 동의</h2>
+      <dl class="consent-text">
+        <dt>실험 목적</dt>
+        <dd>짧은 학습 콘텐츠에서 정보가 얼마나 잘 전달되는지 측정하는 수업(인간공학실험) 과제입니다.</dd>
+        <dt>진행 방법</dt>
+        <dd>${C.CLIP_SECONDS}초 클립 12개를 보거나 들은 뒤, 각 클립에 나온 항목에 대한 문제에 답합니다. 약 10~15분이 걸립니다.</dd>
+        <dt>자발적 참여</dt>
+        <dd>참여는 자유이며, 원하지 않으면 언제든 창을 닫아 그만둘 수 있습니다. 중간에 그만두면 응답은 저장되지 않습니다.</dd>
+        <dt>수집 정보와 익명성</dt>
+        <dd>이름, 연락처, 학번 등 개인을 알아볼 수 있는 정보는 수집하지 않습니다. 연령대, 성별과 과제 응답만 무작위 코드로 저장합니다.</dd>
+        <dt>자료 이용</dt>
+        <dd>수집한 자료는 수업 보고서 작성에만 사용하며, 결과는 집단 평균으로만 보고합니다.</dd>
+      </dl>
+      <label class="check"><input type="checkbox" name="consent" required>
+        <span><b>위 내용을 읽었으며, 실험 참여에 동의합니다.</b></span></label>`, true),
+    button_label: "동의하고 계속",
+  });
+
+  // 3) 기본 정보 (이름·번호 등 신원 정보는 받지 않음)
+  tl.push({
+    type: jsPsychSurveyHtmlForm,
+    html: page(`<h2>기본 정보</h2>
+      <div class="form">
+        <div class="field"><span class="name">연령대</span>${chips("age_group", C.AGE_GROUPS)}</div>
+        <div class="field"><span class="name">성별</span>${chips("gender", ["남", "여", "응답하지 않음"])}</div>
+        <div style="padding-top:10px">
+          <label class="check"><input type="checkbox" name="normal" required>
+            <span>시력(안경·렌즈 교정 포함)과 청력이 정상입니다.</span></label>
+          <label class="check"><input type="checkbox" name="korean" required>
+            <span>한국어가 모어(모국어)입니다.</span></label>
+        </div>
+      </div>`, true),
     button_label: "다음",
     on_finish: (d) => {
-      S.age = d.response.age;
+      S.ageGroup = d.response.age_group;
       S.gender = d.response.gender;
     },
   });
-  // 블록 순서 배정 (정보 입력을 마친 사람에게만 배정해서, 첫 화면에서 나간 사람은 순서를 차지하지 않음)
+
+  // 4) 블록 순서 배정 (정보 입력을 마친 사람에게만 배정해서, 앞 화면에서 나간 사람은 순서를 차지하지 않음)
   tl.push({
     type: jsPsychCallFunction,
     async: true,
@@ -296,18 +338,10 @@ function buildTimeline() {
         .catch((e) => {
           window.removeEventListener("beforeunload", warnLeave);
           stopWith(`<h2>잠시 후 다시 시도해 주세요</h2>
-            <p>실험 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 <b>새로고침(F5)</b>해서 다시 시작해 주세요.</p>
+            <p>실험 서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 <b>새로고침(F5)</b>해서 다시 시작해 주세요.</p>
             <p class="note">${e.message}</p>`);
         });
     },
-  });
-
-  tl.push({
-    type: jsPsychFullscreen,
-    fullscreen_mode: true,
-    message: page(`<p style="text-align:center">실험은 <b>전체 화면</b>에서 진행됩니다.<br>아래 버튼을 눌러 주세요.</p>`),
-    button_label: "전체 화면으로 시작",
-    on_finish: () => AUDIO.resume(),
   });
 
   // 소리 테스트: 맞힐 때까지 반복
@@ -323,7 +357,7 @@ function buildTimeline() {
         return lastTarget;
       },
       message: () => S.soundcheckAttempts > 0
-        ? `<p class="warn">앗, 다른 단어였어요. 볼륨을 조금 올리고 다시 들어 주세요.</p>` : "",
+        ? `<p class="warn">다른 단어였습니다. 음량을 조금 올리고 다시 들어 주세요.</p>` : "",
       on_finish: () => { S.soundcheckAttempts++; },
     }],
     loop_function: (data) => !data.values()[0].sc_correct,
@@ -332,24 +366,29 @@ function buildTimeline() {
   tl.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: page(`<h2>과제 안내</h2>
-      <p>화면에 <b>'가상의 가공법 이름 – 공정 분류'</b> 쌍이 ${C.CLIP_SECONDS}초 동안 차례로 제시됩니다. 예: <b>펄디법 – ${C.PROCESSES[0]}</b></p>
+      <p>화면에 <b>가상의 가공법 이름과 공정 분류</b>가 짝지어 ${C.CLIP_SECONDS}초 동안 차례로 제시됩니다.</p>
+      <div class="stage-sample"><span>펄디법 – ${C.PROCESSES[0]}</span></div>
       <ul>
-        <li>공정 분류는 <b>${C.PROCESSES.join(", ")}</b> 네 가지뿐이에요.</li>
+        <li>공정 분류는 <b>${C.PROCESSES.join(" · ")}</b> 네 가지뿐입니다.</li>
         <li>클립에 따라 <b>자막만</b>, <b>음성만</b>, 또는 <b>자막과 음성이 함께</b> 나옵니다.</li>
-        <li>클립이 끝나면 방금 나온 각 가공법이 어느 공정에 속했는지 고르는 문제가 나와요.</li>
+        <li>클립이 끝나면 방금 나온 각 가공법이 어느 공정에 속했는지 고르는 문제가 나옵니다.</li>
         <li>문제마다 <b>${C.QUESTION_TIME_LIMIT_MS / 1000}초 안에</b>, 되도록 <b>빠르고 정확하게</b> 마우스로 답해 주세요.</li>
-        <li>문제를 다 풀면 클립이 얼마나 따라가기 쉬웠는지 1~5점으로 답합니다.</li>
+        <li>문제를 다 풀면 클립을 얼마나 잘 따라갈 수 있었는지 1~5점으로 답합니다.</li>
       </ul>
-      <p>먼저 <b>연습</b>을 한 번 해 볼게요. 연습에서는 정답을 알려 드려요.</p>`),
+      <p class="note">먼저 연습을 한 번 합니다. 연습에서는 정답을 알려 드립니다.</p>`, true),
     choices: ["연습 시작"],
   });
   tl.push(...clipUnit(() => S.practiceClip, 0));
   tl.push({
     type: jsPsychHtmlButtonResponse,
-    stimulus: () => page(`<h2>연습 끝</h2>
-      <p style="text-align:center">연습에서 ${S.practiceTotal}문제 중 ${S.practiceCorrect}문제를 맞혔어요.</p>
-      <p>이제 본실험을 시작합니다. 본실험은 클립 <b>12개</b>를 <b>3개 묶음</b>으로 나눠 진행하고,
-      <b>정답은 알려 드리지 않아요</b>. 묶음 사이에 쉴 수 있어요.</p>`),
+    stimulus: () => page(`<h2>연습 완료</h2>
+      <p>연습 문제 ${S.practiceTotal}개 중 <b>${S.practiceCorrect}개</b>를 맞혔습니다.</p>
+      <div class="facts">
+        <div class="fact">본실험<b>클립 12개</b></div>
+        <div class="fact">구성<b>3개 묶음 × 4클립</b></div>
+        <div class="fact">정답 안내<b>없음</b></div>
+      </div>
+      <p class="note">묶음 사이에 쉬어 갈 수 있습니다.</p>`, true),
     choices: ["본실험 시작"],
   });
 
@@ -361,9 +400,10 @@ function buildTimeline() {
       type: jsPsychHtmlButtonResponse,
       stimulus: () => {
         const m = S.order[b];
-        const rest = b > 0 ? `<p style="text-align:center">수고하셨어요! 잠시 쉬었다가 준비되면 시작해 주세요.</p>` : "";
-        return page(`<h2>묶음 ${b + 1} / ${MODALITIES.length}</h2>${rest}
-          <p style="text-align:center">이번 묶음의 클립 ${perBlock}개는 <b>${C.MODALITY_LABELS[m]}</b>으로 제시됩니다.</p>`);
+        const rest = b > 0 ? `<p class="center">수고하셨습니다. 잠시 쉬었다가 준비되면 시작해 주세요.</p>` : "";
+        return page(`${progressBar(b * perBlock, total, `본실험 · 묶음 ${b + 1} / ${MODALITIES.length}`)}
+          <h2 class="center">묶음 ${b + 1}</h2>${rest}
+          <p class="center">이번 묶음의 클립 ${perBlock}개는 <b>${C.MODALITY_LABELS[m]}</b>으로 제시됩니다.</p>`);
       },
       choices: ["시작"],
     });
@@ -376,7 +416,7 @@ function buildTimeline() {
   // 저장
   tl.push({
     type: jsPsychHtmlKeyboardResponse,
-    stimulus: page(`<p style="text-align:center;font-size:22px">응답을 저장하고 있어요… 창을 닫지 말아 주세요.</p>`),
+    stimulus: page(`<p class="center" style="font-size:20px;margin:18px 0">응답을 저장하고 있습니다… 창을 닫지 말아 주세요.</p>`),
     choices: "NO_KEYS",
     trial_duration: 300,
   });
@@ -384,12 +424,13 @@ function buildTimeline() {
   tl.push({
     type: jsPsychHtmlKeyboardResponse,
     stimulus: () => {
-      if (S.saveOk) return page(`<h2>실험이 끝났습니다. 감사합니다!</h2>
-        <p style="text-align:center">응답이 저장되었어요. 이제 창을 닫아도 됩니다.</p>`);
+      if (S.saveOk) return page(`<h2>실험이 끝났습니다</h2>
+        <p>참여해 주셔서 감사합니다. 응답이 저장되었습니다.</p>
+        <p class="note">이제 창을 닫으셔도 됩니다.</p>`, true);
       const links = S.files.map((f) => downloadLink(f)).join("<br>");
-      return page(`<h2>실험이 끝났습니다. 감사합니다!</h2>
-        <p class="warn">응답을 서버에 저장하지 못했어요.</p>
-        <p>아래 파일 3개를 눌러 내려받은 뒤, 실험 진행자에게 보내 주세요.</p><p>${links}</p>`);
+      return page(`<h2>실험이 끝났습니다</h2>
+        <p class="warn">응답을 서버에 저장하지 못했습니다.</p>
+        <p>아래 파일 3개를 눌러 내려받은 뒤, 실험 진행자에게 보내 주세요.</p><p>${links}</p>`, true);
     },
     choices: "NO_KEYS",
   });
@@ -403,7 +444,7 @@ function buildFiles() {
   const end = new Date();
   const participant = [{
     // 익명성을 위해 시작·종료 시각과 브라우저 정보는 저장하지 않고 소요 시간만 남김
-    participant: S.code, pilot: S.pilot ? 1 : 0, age: S.age, gender: S.gender,
+    participant: S.code, pilot: S.pilot ? 1 : 0, age_group: S.ageGroup, gender: S.gender,
     block_order_id: S.orderId, block_order: S.order.join(">"), assignment: S.assignment,
     duration_min: ((end - S.startTime) / 60000).toFixed(1),
     practice_correct: S.practiceCorrect, practice_total: S.practiceTotal,
@@ -465,7 +506,7 @@ function warnLeave(e) { e.preventDefault(); e.returnValue = ""; }
 //  시작: 기기 확인 → 항목 목록·음성 불러오기 → 실험 실행
 // =====================================================================
 function stopWith(html) {
-  document.body.innerHTML = `<div class="box" style="margin-top:20vh">${html}</div>`;
+  document.body.innerHTML = `<div class="stopped box">${EYEBROW}${html}</div>`;
 }
 async function main() {
   const ua = navigator.userAgent;
@@ -473,7 +514,7 @@ async function main() {
   const tooSmall = screen.width > 0 && (screen.width < 960 || screen.height < 600);  // 0 = 크기를 알 수 없음
   if (isMobile || tooSmall) {
     return stopWith(`<h2>컴퓨터로 접속해 주세요</h2>
-      <p>이 실험은 모든 참가자가 같은 화면 크기에서 보도록 <b>컴퓨터(노트북·데스크톱)</b>로만 참여할 수 있어요.
+      <p>이 실험은 모든 참가자가 같은 화면 크기에서 보도록 <b>컴퓨터(노트북·데스크톱)</b>로만 참여할 수 있습니다.
       같은 링크를 컴퓨터에서 열어 주세요.</p>
       <p class="note">(감지된 화면: ${screen.width}×${screen.height})</p>`);
   }
@@ -482,20 +523,20 @@ async function main() {
   try {
     const items = parseCSV(await fetchText("stimuli/items.csv")).map((r) => ({ ...r, audio: `stimuli/${r.audio}` }));
     const errs = checkItems(items);
-    if (errs.length) return stopWith(`<h2>항목 목록(items.csv)에 문제가 있어요</h2><ul>${errs.map((e) => `<li>${e}</li>`).join("")}</ul>`);
+    if (errs.length) return stopWith(`<h2>항목 목록(items.csv)에 문제가 있습니다</h2><ul>${errs.map((e) => `<li>${e}</li>`).join("")}</ul>`);
     S.mainItems = items.filter((r) => r.set === "main");
     S.practiceItems = items.filter((r) => r.set === "practice");
 
     const paths = [...items.map((r) => r.audio), ...Object.keys(C.SOUNDCHECK_WORDS).map((k) => `stimuli/audio/soundcheck/${k}.wav`)];
     let n = 0;
-    label.textContent = "음성 파일을 불러오고 있어요…";
+    label.textContent = "음성 파일을 불러오고 있습니다…";
     await Promise.all(paths.map((p) => AUDIO.load(p).then(() => { bar.style.width = `${(++n / paths.length) * 100}%`; })));
     try {
       await document.fonts.load('500 40px "Noto Sans KR"');
       S.fontOk = document.fonts.check('500 40px "Noto Sans KR"');
     } catch { S.fontOk = false; }
   } catch (e) {
-    return stopWith(`<h2>실험을 불러오지 못했어요</h2><p>인터넷 연결을 확인하고 새로고침(F5)해 주세요.</p><p class="note">${e.message}</p>`);
+    return stopWith(`<h2>실험을 불러오지 못했습니다</h2><p>인터넷 연결을 확인하고 새로고침(F5)해 주세요.</p><p class="note">${e.message}</p>`);
   }
   document.getElementById("loading").remove();
   window.addEventListener("beforeunload", warnLeave);

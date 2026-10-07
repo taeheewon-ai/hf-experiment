@@ -69,6 +69,7 @@ class ClipPlugin {
     const showSub = clip.modality !== "audio";
     const playAudio = clip.modality !== "subtitle";
 
+    document.body.classList.add("clip-mode");   // 클립 동안은 카드 없이 어두운 배경
     el.innerHTML = `<div class="stage"><div class="fix">+</div><div class="sub" id="sub"></div></div>`;
     const sub = el.querySelector("#sub");
 
@@ -81,6 +82,7 @@ class ClipPlugin {
     const finish = () => {
       if (done) return;
       done = true;
+      document.body.classList.remove("clip-mode");
       sub.textContent = "";
       const mean = lags.length ? lags.reduce((a, b) => a + b, 0) / lags.length : "";
       this.jsPsych.finishTrial({
@@ -134,15 +136,18 @@ class SoundCheckPlugin {
     const keys = Object.keys(trial.words);
     el.innerHTML = `
       <div class="box">
+        <div class="eyebrow">${CONFIG.COURSE_LABEL}</div>
         <h2>소리 테스트</h2>
         ${trial.message}
-        <p>아래 <b>[소리 듣기]</b> 버튼을 누르면 단어 하나가 들려요. 여러 번 들어도 됩니다.<br>
-        소리가 <b>편하게 잘 들리도록 컴퓨터 볼륨을 조절</b>한 뒤, 들린 단어를 골라 주세요.<br>
-        <span class="note">여기서 맞춘 볼륨은 실험이 끝날 때까지 바꾸지 말아 주세요.</span></p>
+        <p><b>[소리 듣기]</b>를 누르면 단어 하나가 들립니다. 여러 번 들어도 됩니다.<br>
+        소리가 <b>편하게 잘 들리도록 컴퓨터 음량을 조절</b>한 뒤, 들린 단어를 골라 주세요.</p>
+        <p class="note">여기서 맞춘 음량은 실험이 끝날 때까지 바꾸지 말아 주세요.</p>
       </div>
-      <div style="text-align:center;margin-top:24px">
-        <button class="jspsych-btn play-btn" id="play">🔊 소리 듣기</button><br>
+      <div class="center" style="margin-top:22px">
+        <button class="jspsych-btn play-btn" id="play">🔊 소리 듣기</button>
+        <div class="sc-choices">
         ${keys.map((k) => `<button class="jspsych-btn choice-btn" data-k="${k}" disabled>${trial.words[k]}</button>`).join("")}
+        </div>
       </div>`;
     let plays = 0;
     el.querySelector("#play").addEventListener("click", async () => {

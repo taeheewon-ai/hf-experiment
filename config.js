@@ -6,7 +6,12 @@ const CONFIG = {
   // 비워 두면 "테스트 모드": 데이터가 서버로 가지 않고 내 컴퓨터로 CSV 파일이 다운로드됩니다.
   DATAPIPE_ID: "m3DWHYvdkTa4",
 
-  EXPERIMENT_VERSION: "4.0",
+  EXPERIMENT_VERSION: "5.0",
+
+  // 화면에 보이는 이름
+  EXPERIMENT_TITLE: "숏폼 학습 콘텐츠 정보 전달 실험",
+  COURSE_LABEL: "2026-2 인간공학실험 · 3조",
+  AGE_GROUPS: ["10대", "20대", "30대", "40대", "50대 이상"],
 
   // 클립 설정
   CLIP_SECONDS: 20,             // 클립 길이(초)
@@ -21,7 +26,8 @@ const CONFIG = {
 
   // 자기보고 문항
   RATING_QUESTION: "제시된 정보를 끝까지 따라갈 수 있었다.",
-  RATING_LABELS: ["1<br>전혀 그렇지 않다", "2", "3", "4", "5<br>매우 그렇다"],
+  RATING_LABELS: ["1", "2", "3", "4", "5"],
+  RATING_ENDS: ["전혀 그렇지 않다", "매우 그렇다"],
 
   // 소리 테스트 단어 (tools/make_audio.py 의 SOUNDCHECK_WORDS 와 같아야 함)
   SOUNDCHECK_WORDS: { apple: "사과", sea: "바다", pencil: "연필", cloud: "구름" },

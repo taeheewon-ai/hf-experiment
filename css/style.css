@@ -1,29 +1,114 @@
+/* =====================================================================
+   화면 디자인
+   ※ 클립 화면(.stage, .fix, .sub)의 크기·글꼴·위치는 실험 자극 규격이므로 바꾸지 마세요.
+   ===================================================================== */
+:root {
+  --bg: #eef1f5;
+  --card: #ffffff;
+  --ink: #1d2433;
+  --muted: #5d6677;
+  --line: #dfe3ea;
+  --accent: #2b5797;
+  --accent-dark: #1f4275;
+  --accent-soft: #e8eef8;
+  --ok: #1b7f4b;
+  --no: #b3261e;
+}
+
 html, body {
+  height: 100%;
+  margin: 0;
   font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
-  background: #f4f4f2;
-  color: #1c1c1c;
+  background: var(--bg);
+  color: var(--ink);
 }
-.jspsych-display-element { font-family: inherit; font-size: 18px; }
-.jspsych-content { max-width: 960px; }
+.jspsych-display-element { font-family: inherit; font-size: 17px; }
 
-/* 안내 화면 */
-.box { text-align: left; line-height: 1.75; max-width: 720px; margin: 0 auto; }
-.box h2 { text-align: center; margin-bottom: 1.2em; }
-.box ul { padding-left: 1.3em; }
-.box .note { color: #555; font-size: 15px; }
-.warn { color: #b3261e; font-weight: 700; }
+/* 모든 안내·응답 화면은 흰 카드 안에 표시 */
+.jspsych-content {
+  box-sizing: border-box;
+  width: min(760px, calc(100vw - 32px));
+  max-width: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(29, 36, 51, 0.08);
+  padding: 40px 48px 36px;
+  line-height: 1.7;
+}
+/* 클립 재생 중에는 카드 없이 검은 화면만 */
+body.clip-mode, html:has(body.clip-mode) { background: #2a2d33; }
+.jspsych-content-wrapper { padding: 24px 0; box-sizing: border-box; }
+body.clip-mode .jspsych-content {
+  width: auto; background: none; border: none; box-shadow: none; padding: 0;
+}
 
+/* 머리글 */
+.eyebrow {
+  display: inline-block; font-size: 13px; font-weight: 500; letter-spacing: 0.04em;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 3px 10px; border-radius: 999px; margin-bottom: 14px;
+}
+.box { text-align: left; }
+.box h1 { font-size: 27px; line-height: 1.4; margin: 0 0 8px; }
+.box h2 { font-size: 23px; margin: 0 0 18px; }
+.box .lead { color: var(--muted); margin: 0 0 22px; }
+.box ul { padding-left: 1.2em; margin: 10px 0 18px; }
+.box li { margin: 4px 0; }
+.center { text-align: center; }
+.note { color: var(--muted); font-size: 14.5px; }
+.warn { color: var(--no); font-weight: 700; }
+.divider { border: none; border-top: 1px solid var(--line); margin: 22px 0; }
+
+/* 요약 정보 칩 */
+.facts { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 22px; }
+.fact {
+  flex: 1 1 150px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  font-size: 14px; color: var(--muted); background: #fafbfc;
+}
+.fact b { display: block; color: var(--ink); font-size: 17px; }
+
+/* 진행 표시 */
+.progress { margin: 0 0 22px; }
+.progress .label { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--muted); margin-bottom: 6px; }
+.progress .track { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.progress .fill { height: 100%; background: var(--accent); border-radius: 3px; }
+
+/* 버튼 */
 .jspsych-btn {
-  font-family: inherit; font-size: 17px; padding: 10px 22px; border-radius: 8px;
+  font-family: inherit; font-size: 16px; font-weight: 500;
+  padding: 12px 30px; margin: 6px; border-radius: 10px; border: 1px solid var(--accent);
+  background: var(--accent); color: #fff; cursor: pointer;
+  transition: background .15s, border-color .15s, box-shadow .15s;
 }
+.jspsych-btn:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.jspsych-btn:disabled { background: #b9c3d3; border-color: #b9c3d3; cursor: default; }
+#jspsych-html-button-response-btngroup, .jspsych-survey-html-form, #jspsych-fullscreen-btn { margin-top: 8px; }
+#jspsych-survey-html-form-next { margin-top: 18px; }
 
 /* 입력 양식 */
-.form { text-align: left; max-width: 480px; margin: 0 auto; line-height: 2.2; }
-.form input[type=number] { width: 110px; font-size: 17px; padding: 4px 6px; }
-.form .row { margin-bottom: 10px; }
-.form .check { display: flex; gap: 8px; align-items: flex-start; line-height: 1.6; margin-top: 12px; }
+.form { text-align: left; }
+.field { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.field .name { font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span {
+  display: inline-block; padding: 7px 16px; border: 1px solid var(--line); border-radius: 999px;
+  cursor: pointer; font-size: 15px; background: #fff; transition: all .12s;
+}
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; line-height: 1.6; cursor: pointer; }
+.check input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); }
+.consent-text {
+  border: 1px solid var(--line); border-radius: 12px; background: #fafbfc;
+  padding: 16px 20px; font-size: 15px; margin-bottom: 14px;
+}
+.consent-text dt { font-weight: 700; margin-top: 8px; }
+.consent-text dt:first-child { margin-top: 0; }
+.consent-text dd { margin: 2px 0 0; color: #333b4a; }
 
-/* 클립 화면: 모든 참가자에게 같은 크기(900x506px), 같은 글꼴, 같은 위치 */
+/* 클립 화면: 모든 참가자에게 같은 크기(900x506px), 같은 글꼴, 같은 위치 — 자극 규격 */
 .stage {
   position: relative; width: 900px; height: 506px; margin: 0 auto;
   background: #111; border-radius: 4px; cursor: none; user-select: none;
@@ -38,18 +123,46 @@ html, body {
   color: #fff; letter-spacing: 0.02em;
 }
 
-/* 문제 화면 */
-.question { font-size: 30px; font-weight: 700; margin-bottom: 40px; }
-.choice-btn { font-size: 22px; min-width: 150px; padding: 16px 20px; margin: 0 8px; }
-.rating-btn { font-size: 17px; min-width: 120px; padding: 12px 10px; margin: 0 5px; line-height: 1.4; }
-.feedback { font-size: 26px; font-weight: 700; }
-.feedback.ok { color: #1b7f3b; }
-.feedback.no { color: #b3261e; }
+/* 문항 화면 */
+.qmeta { font-size: 13.5px; color: var(--muted); margin-bottom: 26px; }
+.question { font-size: 28px; font-weight: 700; margin-bottom: 34px; line-height: 1.5; }
+.question .name { color: var(--accent); }
+.choice-btn {
+  min-width: 140px; padding: 18px 10px; font-size: 20px; font-weight: 700;
+  background: #fff; color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px;
+}
+.choice-btn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+
+/* 자기보고 척도 */
+.scale-q { font-size: 22px; font-weight: 700; margin: 6px 0 28px; }
+.rating-btn {
+  width: 92px; height: 64px; padding: 0; font-size: 22px; font-weight: 700;
+  background: #fff; color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px;
+}
+.rating-btn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+.scale-ends { display: flex; justify-content: space-between; width: min(520px, 100%); margin: 10px auto 0; font-size: 14px; color: var(--muted); }
+
+/* 연습 피드백 */
+.feedback { font-size: 24px; font-weight: 700; margin: 10px 0 6px; }
+.feedback.ok { color: var(--ok); }
+.feedback.no { color: var(--no); }
 
 /* 소리 테스트 */
-.play-btn { font-size: 20px; padding: 14px 28px; margin-bottom: 30px; }
+.play-btn { font-size: 18px; padding: 14px 30px; margin: 4px 0 26px; }
+.sc-choices { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
 /* 준비 중 화면 */
-.loading { max-width: 420px; margin: 30vh auto 0; text-align: center; }
-.loading .bar { height: 10px; background: #ddd; border-radius: 5px; overflow: hidden; }
-.loading .bar div { height: 100%; width: 0; background: #3a6ea5; transition: width .2s; }
+.loading { max-width: 420px; margin: 30vh auto 0; text-align: center; color: var(--muted); }
+.loading .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.loading .bar div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.stopped { box-sizing: border-box; width: min(640px, calc(100vw - 32px)); margin: 18vh auto 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: 16px; padding: 36px 40px; line-height: 1.7; }
+
+/* 과제 안내의 자막 예시(실제 자극보다 작게 보여 주는 견본) */
+.stage-sample {
+  display: flex; align-items: flex-end; justify-content: center;
+  width: 360px; height: 120px; margin: 14px auto 18px; padding-bottom: 16px; box-sizing: border-box;
+  background: #111; border-radius: 6px; color: #fff; font-size: 20px; font-weight: 500; position: relative;
+}
+.stage-sample::before { content: "+"; position: absolute; top: 36px; left: 0; right: 0; text-align: center; color: #bbb; font-size: 22px; }
+.choice-btn:disabled { background: #fff; color: #b6bdc9; border-color: var(--line); }
