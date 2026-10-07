@@ -6,7 +6,7 @@ const CONFIG = {
   // 비워 두면 "테스트 모드": 데이터가 서버로 가지 않고 내 컴퓨터로 CSV 파일이 다운로드됩니다.
   DATAPIPE_ID: "m3DWHYvdkTa4",
 
-  EXPERIMENT_VERSION: "6.0",
+  EXPERIMENT_VERSION: "6.1",
 
   // 화면에 보이는 이름
   EXPERIMENT_TITLE: "숏폼 학습 콘텐츠 정보 전달 실험",

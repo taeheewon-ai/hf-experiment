@@ -136,6 +136,14 @@ async function assignOrder() {
   S.order = C.BLOCK_ORDERS[S.orderId - 1];
 }
 
+// 문항 순서: 무작위로 섞되, 제시 순서와 완전히 같으면 다시 섞음 (순서만 외우는 전략 방지)
+const questionOrder = (items) => {
+  if (items.length < 2) return items.slice();
+  let q;
+  do { q = shuffle(items); } while (q.every((it, i) => it === items[i]));
+  return q;
+};
+
 // ---------- 참가자별 클립 구성 ----------
 //  · 항목 이름을 6개 조건(항목 수 × 제시 방식)에 무작위로 나눠 줌(참가자마다 다름)
 //  · 각 조건에는 공정별로 같은 개수(조건당 12개면 공정별 3개)가 들어감 — 조건 합계 기준 균형
@@ -159,14 +167,14 @@ function buildSequence() {
     for (const n of C.ITEM_COUNTS) for (const items of conditions[`${m}|${n}`]) blockClips.push({ modality: m, n, items });
     shuffle(blockClips).forEach((c) => S.sequence.push({ ...c, block: b + 1, phase: "main" }));
   });
-  S.sequence.forEach((c, i) => { c.clipNo = i + 1; c.qOrder = shuffle(c.items); });
+  S.sequence.forEach((c, i) => { c.clipNo = i + 1; c.qOrder = questionOrder(c.items); });
 
   // 연습: 자막+음성, 정해진 순서(예: 3개 → 6개). clip_no 는 0으로 기록하고 항목 수로 구분
   const pi = shuffle(S.practiceItems);
   let at = 0;
   S.practiceClips = C.PRACTICE_CLIPS.map((n, j) => {
     const items = pi.slice(at, at + n); at += n;
-    return { modality: "both", n, items, block: 0, clipNo: 0, practiceNo: j + 1, phase: "practice", qOrder: shuffle(items) };
+    return { modality: "both", n, items, block: 0, clipNo: 0, practiceNo: j + 1, phase: "practice", qOrder: questionOrder(items) };
   });
 }
 
