@@ -3,6 +3,8 @@
 // =====================================================================
 const C = CONFIG;
 const MODALITIES = ["subtitle", "audio", "both"];
+const PER_BLOCK = C.ITEM_COUNTS.reduce((a, n) => a + C.CLIPS_PER_N[n], 0);   // 블록 하나의 클립 수 (4 + 2 = 6)
+const TOTAL_CLIPS = MODALITIES.length * PER_BLOCK;                            // 18
 
 // 참가자 한 명의 모든 정보가 여기에 모입니다.
 const URLP = new URLSearchParams(location.search);
@@ -15,8 +17,8 @@ const S = {
   pilot: URLP.get("pilot") === "1",
   code: null, assignment: "", ageGroup: "", gender: "", orderId: null, order: null,
   mainItems: [], practiceItems: [],
-  sequence: [],        // 본실험 클립 12개(보는 순서대로)
-  practiceClip: null,
+  sequence: [],        // 본실험 클립 18개(보는 순서대로)
+  practiceClips: [],
   trialRows: [], clipRows: [],
   soundcheckAttempts: 0, practiceCorrect: 0, practiceTotal: 0,
   startTime: new Date(), fontOk: false, saveOk: false, files: [],
@@ -88,7 +90,9 @@ function checkItems(items) {
   const errs = [];
   const main = items.filter((r) => r.set === "main");
   const prac = items.filter((r) => r.set === "practice");
-  const need = MODALITIES.length * C.CLIPS_PER_CONDITION * C.ITEM_COUNTS.reduce((a, b) => a + b, 0);
+  // 조건 하나 = 항목 수 n × 클립 수 (예: 3×4 = 6×2 = 12문항)
+  const perCondition = C.ITEM_COUNTS.map((n) => n * C.CLIPS_PER_N[n]);
+  const need = MODALITIES.length * perCondition.reduce((a, b) => a + b, 0);
   if (main.length !== need) errs.push(`본실험(main) 항목이 ${main.length}개입니다. ${need}개여야 합니다.`);
   for (const p of C.PROCESSES) {
     const n = main.filter((r) => r.process === p).length;
@@ -99,7 +103,8 @@ function checkItems(items) {
   const names = items.map((r) => r.name);
   const dup = names.filter((n, i) => names.indexOf(n) !== i);
   if (dup.length) errs.push(`이름이 겹치는 항목: ${[...new Set(dup)].join(", ")}`);
-  if (!prac.length) errs.push("연습(practice) 항목이 없습니다.");
+  const needPrac = C.PRACTICE_CLIPS.reduce((a, b) => a + b, 0);
+  if (prac.length !== needPrac) errs.push(`연습(practice) 항목이 ${prac.length}개입니다. ${needPrac}개여야 합니다.`);
   return errs;
 }
 
@@ -132,21 +137,20 @@ async function assignOrder() {
 }
 
 // ---------- 참가자별 클립 구성 ----------
-//  · 항목 이름을 조건에 무작위로 나눠 줌(참가자마다 다름)
-//  · 한 조건의 두 클립을 합치면 네 공정이 같은 횟수
-//  · 블록(제시 방식) 순서는 참가자 번호로, 블록 안 클립 순서는 무작위
+//  · 항목 이름을 6개 조건(항목 수 × 제시 방식)에 무작위로 나눠 줌(참가자마다 다름)
+//  · 각 조건에는 공정별로 같은 개수(조건당 12개면 공정별 3개)가 들어감 — 조건 합계 기준 균형
+//  · 조건의 항목들을 클립 크기(3개 또는 6개)로 무작위로 나눔 (클립 단위 균형은 따지지 않음)
+//  · 블록(제시 방식) 순서는 assignOrder()로, 블록 안 클립 순서·클립 안 제시 순서·문항 순서는 각각 무작위
 function buildSequence() {
   const pools = {};
   for (const p of C.PROCESSES) pools[p] = shuffle(S.mainItems.filter((r) => r.process === p));
-  const conditions = {};   // "audio|6" → [클립1 항목들, 클립2 항목들]
+  const conditions = {};   // "audio|6" → [클립1 항목들, 클립2 항목들, …]
   for (const m of MODALITIES) {
     for (const n of C.ITEM_COUNTS) {
-      const perProc = (n * C.CLIPS_PER_CONDITION) / C.PROCESSES.length;
-      // 공정별로 뽑아 이어 붙인 뒤 클립1, 클립2, 클립1 … 번갈아 나눔 → 두 클립 크기가 같고 공정이 고르게 퍼짐
-      const dealt = shuffle(C.PROCESSES).flatMap((p) => pools[p].splice(0, perProc));
-      const clips = Array.from({ length: C.CLIPS_PER_CONDITION }, () => []);
-      dealt.forEach((it, i) => clips[i % C.CLIPS_PER_CONDITION].push(it));
-      conditions[`${m}|${n}`] = clips.map(shuffle);
+      const k = C.CLIPS_PER_N[n];
+      const perProc = (n * k) / C.PROCESSES.length;
+      const items = shuffle(C.PROCESSES.flatMap((p) => pools[p].splice(0, perProc)));
+      conditions[`${m}|${n}`] = Array.from({ length: k }, (_, j) => items.slice(j * n, (j + 1) * n));
     }
   }
   S.sequence = [];
@@ -157,8 +161,13 @@ function buildSequence() {
   });
   S.sequence.forEach((c, i) => { c.clipNo = i + 1; c.qOrder = shuffle(c.items); });
 
+  // 연습: 자막+음성, 정해진 순서(예: 3개 → 6개). clip_no 는 0으로 기록하고 항목 수로 구분
   const pi = shuffle(S.practiceItems);
-  S.practiceClip = { modality: "both", n: pi.length, items: pi, block: 0, clipNo: 0, phase: "practice", qOrder: shuffle(pi) };
+  let at = 0;
+  S.practiceClips = C.PRACTICE_CLIPS.map((n, j) => {
+    const items = pi.slice(at, at + n); at += n;
+    return { modality: "both", n, items, block: 0, clipNo: 0, practiceNo: j + 1, phase: "practice", qOrder: shuffle(items) };
+  });
 }
 
 // =====================================================================
@@ -173,7 +182,7 @@ function clipUnit(getClip, total) {
     stimulus: () => {
       const c = getClip();
       const bar = practice() ? "" : progressBar(c.clipNo - 1, total, `본실험 · 클립 ${c.clipNo} / ${total}`);
-      const title = practice() ? "연습 클립" : `클립 ${c.clipNo}`;
+      const title = practice() ? `연습 클립 ${c.practiceNo} / ${C.PRACTICE_CLIPS.length}` : `클립 ${c.clipNo}`;
       return page(`${bar}<h2 class="center">${title}</h2>
         <p class="center">준비되면 <b>[시작]</b>을 눌러 주세요.<br>
         화면 가운데 <b>+</b>가 나오고, 1초 뒤 ${C.CLIP_SECONDS}초 동안 항목이 제시됩니다.</p>
@@ -278,7 +287,7 @@ function buildTimeline() {
     message: page(`<h1>${C.EXPERIMENT_TITLE}</h1>
       <p class="lead">짧은 학습 클립을 보거나 듣고, 방금 나온 내용을 얼마나 정확히 알아보는지 측정합니다.</p>
       <div class="facts">
-        <div class="fact">소요 시간<b>약 10~15분</b></div>
+        <div class="fact">소요 시간<b>${C.EST_MINUTES}</b></div>
         <div class="fact">준비물<b>PC + 스피커/이어폰</b></div>
         <div class="fact">환경<b>조용한 곳</b></div>
       </div>
@@ -295,7 +304,7 @@ function buildTimeline() {
         <dt>실험 목적</dt>
         <dd>짧은 학습 콘텐츠에서 정보가 얼마나 잘 전달되는지 측정하는 수업(인간공학실험) 과제입니다.</dd>
         <dt>진행 방법</dt>
-        <dd>${C.CLIP_SECONDS}초 클립 12개를 보거나 들은 뒤, 각 클립에 나온 항목에 대한 문제에 답합니다. 약 10~15분이 걸립니다.</dd>
+        <dd>${C.CLIP_SECONDS}초 클립 ${TOTAL_CLIPS}개를 보거나 들은 뒤, 각 클립에 나온 항목에 대한 문제에 답합니다. ${C.EST_MINUTES}이 걸립니다.</dd>
         <dt>자발적 참여</dt>
         <dd>참여는 자유이며, 원하지 않으면 언제든 창을 닫아 그만둘 수 있습니다. 중간에 그만두면 응답은 저장되지 않습니다.</dd>
         <dt>수집 정보와 익명성</dt>
@@ -375,17 +384,17 @@ function buildTimeline() {
         <li>문제마다 <b>${C.QUESTION_TIME_LIMIT_MS / 1000}초 안에</b>, 되도록 <b>빠르고 정확하게</b> 마우스로 답해 주세요.</li>
         <li>문제를 다 풀면 클립을 얼마나 잘 따라갈 수 있었는지 1~5점으로 답합니다.</li>
       </ul>
-      <p class="note">먼저 연습을 한 번 합니다. 연습에서는 정답을 알려 드립니다.</p>`, true),
+      <p class="note">먼저 연습 클립 ${C.PRACTICE_CLIPS.length}개로 연습합니다. 연습에서는 정답을 알려 드립니다.</p>`, true),
     choices: ["연습 시작"],
   });
-  tl.push(...clipUnit(() => S.practiceClip, 0));
+  C.PRACTICE_CLIPS.forEach((_, j) => tl.push(...clipUnit(() => S.practiceClips[j], 0)));
   tl.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: () => page(`<h2>연습 완료</h2>
       <p>연습 문제 ${S.practiceTotal}개 중 <b>${S.practiceCorrect}개</b>를 맞혔습니다.</p>
       <div class="facts">
-        <div class="fact">본실험<b>클립 12개</b></div>
-        <div class="fact">구성<b>3개 묶음 × 4클립</b></div>
+        <div class="fact">본실험<b>클립 ${TOTAL_CLIPS}개</b></div>
+        <div class="fact">구성<b>${MODALITIES.length}개 묶음 × ${PER_BLOCK}클립</b></div>
         <div class="fact">정답 안내<b>없음</b></div>
       </div>
       <p class="note">묶음 사이에 쉬어 갈 수 있습니다.</p>`, true),
@@ -393,8 +402,8 @@ function buildTimeline() {
   });
 
   // 본실험: 블록 3개 × 클립 4개
-  const perBlock = C.ITEM_COUNTS.length * C.CLIPS_PER_CONDITION;
-  const total = MODALITIES.length * perBlock;
+  const perBlock = PER_BLOCK;
+  const total = TOTAL_CLIPS;
   for (let b = 0; b < MODALITIES.length; b++) {
     tl.push({
       type: jsPsychHtmlButtonResponse,

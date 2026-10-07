@@ -6,7 +6,7 @@ const CONFIG = {
   // 비워 두면 "테스트 모드": 데이터가 서버로 가지 않고 내 컴퓨터로 CSV 파일이 다운로드됩니다.
   DATAPIPE_ID: "m3DWHYvdkTa4",
 
-  EXPERIMENT_VERSION: "5.0",
+  EXPERIMENT_VERSION: "6.0",
 
   // 화면에 보이는 이름
   EXPERIMENT_TITLE: "숏폼 학습 콘텐츠 정보 전달 실험",
@@ -15,8 +15,10 @@ const CONFIG = {
 
   // 클립 설정
   CLIP_SECONDS: 20,             // 클립 길이(초)
-  ITEM_COUNTS: [4, 8],          // 항목 수 조건 → 항목당 5초 / 2.5초 (20초 클립)
-  CLIPS_PER_CONDITION: 2,
+  ITEM_COUNTS: [3, 6],          // 항목 수 조건 → 항목당 약 6.67초 / 3.33초 (20초 클립)
+  CLIPS_PER_N: { 3: 4, 6: 2 },  // 조건당 클립 수 (3개×4클립 = 6개×2클립 = 조건당 12문항)
+  PRACTICE_CLIPS: [3, 6],       // 연습 클립 항목 수 (자막+음성, 이 순서대로)
+  EST_MINUTES: "약 15분",       // 안내 화면에 보이는 예상 소요 시간
 
   // 문제 설정
   QUESTION_TIME_LIMIT_MS: 10000,   // 문제당 제한 시간(ms). 10000 = 10초

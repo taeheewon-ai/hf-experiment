@@ -111,10 +111,13 @@
  "audio/items/P02.wav": "ko-KR-SunHiNeural|+0%|v2|농재법, 별공정",
  "audio/items/P03.wav": "ko-KR-SunHiNeural|+0%|v2|긍새법, 숲공정",
  "audio/items/P04.wav": "ko-KR-SunHiNeural|+0%|v2|밴메법, 달공정",
- "audio/items/P05.wav": "ko-KR-SunHiNeural|+0%|v2|첨츠법, 가공정",
- "audio/items/P06.wav": "ko-KR-SunHiNeural|+0%|v2|챈푸법, 다공정",
+ "audio/items/P05.wav": "ko-KR-SunHiNeural|+0%|v2|섬피법, 해공정",
+ "audio/items/P06.wav": "ko-KR-SunHiNeural|+0%|v2|범초법, 달공정",
  "audio/soundcheck/apple.wav": "ko-KR-SunHiNeural|+0%|v2|사과",
  "audio/soundcheck/sea.wav": "ko-KR-SunHiNeural|+0%|v2|바다",
  "audio/soundcheck/pencil.wav": "ko-KR-SunHiNeural|+0%|v2|연필",
- "audio/soundcheck/cloud.wav": "ko-KR-SunHiNeural|+0%|v2|구름"
+ "audio/soundcheck/cloud.wav": "ko-KR-SunHiNeural|+0%|v2|구름",
+ "audio/items/P07.wav": "ko-KR-SunHiNeural|+0%|v2|돌테법, 별공정",
+ "audio/items/P08.wav": "ko-KR-SunHiNeural|+0%|v2|랙푸법, 숲공정",
+ "audio/items/P09.wav": "ko-KR-SunHiNeural|+0%|v2|첼부법, 해공정"
 }
