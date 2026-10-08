@@ -197,7 +197,7 @@ function clipUnit(getClip, total) {
         <p class="center note">클립은 멈추거나 다시 볼 수 없습니다.</p>`);
     },
     choices: ["시작"],
-    on_finish: () => AUDIO.resume(),
+    on_finish: () => { AUDIO.unlock(); },   // 기다리지 않음(Safari에서 화면이 멈추지 않게)
   };
   const clip = {
     type: ClipPlugin,
@@ -301,7 +301,7 @@ function buildTimeline() {
       </div>
       <p class="note">실험은 전체 화면에서 진행됩니다. 진행 중에는 다른 창이나 탭으로 이동하지 말아 주세요.</p>`, true),
     button_label: "전체 화면으로 시작",
-    on_finish: () => AUDIO.resume(),
+    on_finish: () => { AUDIO.unlock(); },   // 기다리지 않음(Safari에서 화면이 멈추지 않게)
   });
 
   // 2) 안내 및 동의

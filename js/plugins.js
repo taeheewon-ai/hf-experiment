@@ -10,10 +10,29 @@ const AUDIO = {
   async load(path) {
     const res = await fetch(path, { cache: "no-cache" });   // 바뀐 음성 파일이 있으면 새로 받음
     if (!res.ok) throw new Error(`음성 파일을 찾을 수 없습니다: ${path}`);
-    this.buffers[path] = await this.ctx.decodeAudioData(await res.arrayBuffer());
+    const data = await res.arrayBuffer();
+    // 옛 Safari는 콜백 방식만 지원하므로 두 방식 모두 처리
+    this.buffers[path] = await new Promise((ok, fail) => {
+      const p = this.ctx.decodeAudioData(data, ok, fail);
+      if (p && p.then) p.then(ok, fail);
+    });
   },
+  // 사용자가 클릭·키 입력을 할 때마다 호출: Safari 등은 이때만 소리 재생을 허락함
+  unlock() {
+    const ctx = this.ctx;
+    if (ctx.state === "running") return;
+    try { ctx.resume(); } catch (e) { /* 무시 */ }
+    try {   // 아주 짧은 무음을 한 번 재생하면 Safari에서 소리가 확실히 풀림
+      const s = ctx.createBufferSource();
+      s.buffer = ctx.createBuffer(1, 1, 22050);
+      s.connect(ctx.destination);
+      s.start(0);
+    } catch (e) { /* 무시 */ }
+  },
+  // 소리 재생 준비. 브라우저가 응답하지 않아도 0.5초 이상 기다리지 않음(화면이 멈추지 않게)
   async resume() {
-    if (this.ctx.state !== "running") await this.ctx.resume();
+    if (this.ctx.state === "running") return;
+    try { await Promise.race([this.ctx.resume(), new Promise((r) => setTimeout(r, 500))]); } catch (e) { /* 무시 */ }
   },
   play(path, when = 0) {
     const src = this.ctx.createBufferSource();
@@ -27,13 +46,17 @@ const AUDIO = {
     const ctx = this.ctx;
     if (ctx.getOutputTimestamp) {
       const ts = ctx.getOutputTimestamp();
-      if (ts.contextTime > 0 && ts.performanceTime > 0) {
-        return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+      const age = performance.now() - ts.performanceTime;
+      // 값이 이상하면(브라우저마다 다름) 쓰지 않고 아래 방식으로 계산
+      if (ts.contextTime > 0 && ts.performanceTime > 0 && age >= 0 && age < 1000) {
+        return ts.contextTime + age / 1000;
       }
     }
     return ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);
   },
 };
+["pointerdown", "keydown", "touchend", "click"].forEach((ev) =>
+  document.addEventListener(ev, () => AUDIO.unlock(), true));
 
 // ---- 참가자가 창을 벗어난 횟수(다른 탭/창으로 이동) ----
 const WATCH = { away: 0, fsExits: 0 };
@@ -59,7 +82,17 @@ class ClipPlugin {
 
   // 주의: async 로 만들면 jsPsych 가 시행이 바로 끝난 것으로 처리하므로 일반 함수로 둡니다.
   trial(el, trial) {
-    AUDIO.resume().then(() => this.run(el, trial));
+    AUDIO.resume().then(() => {
+      if (AUDIO.ctx.state === "running") return this.run(el, trial);
+      // 브라우저가 소리를 막고 있으면(주로 Safari) 클릭 한 번으로 풀고 시작
+      el.innerHTML = `<div class="box center"><h2>소리 켜기</h2>
+        <p>브라우저가 소리 재생을 막고 있습니다. 아래 버튼을 누르면 클립이 시작됩니다.</p>
+        <button class="jspsych-btn" id="unlock">소리 켜고 시작</button></div>`;
+      el.querySelector("#unlock").addEventListener("click", () => {
+        AUDIO.unlock();
+        AUDIO.resume().then(() => this.run(el, trial));
+      });
+    });
   }
 
   run(el, trial) {
@@ -150,8 +183,9 @@ class SoundCheckPlugin {
         </div>
       </div>`;
     let plays = 0;
-    el.querySelector("#play").addEventListener("click", async () => {
-      await AUDIO.resume();
+    el.querySelector("#play").addEventListener("click", () => {
+      // 기다리지 않고 바로 처리: 클릭 안에서 소리를 풀고 재생해야 Safari에서도 들리고, 버튼도 바로 켜짐
+      AUDIO.unlock();
       AUDIO.play(`stimuli/audio/soundcheck/${trial.target}.wav`);
       plays++;
       el.querySelectorAll("[data-k]").forEach((b) => (b.disabled = false));
